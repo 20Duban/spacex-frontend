@@ -1,0 +1,54 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  ECR_REPO: spacex-frontend
+  ECS_CLUSTER: spacex-cluster
+  ECS_SERVICE: spacex-frontend-service
+  REGION: us-east-1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Create ECR repo if it does not exist
+        run: |
+          aws ecr describe-repositories --repository-names $ECR_REPO || \
+          aws ecr create-repository --repository-name $ECR_REPO
+
+      - name: Build, tag, and push image to ECR
+        run: |
+          IMAGE_URI=$(aws ecr describe-repositories --repository-names $ECR_REPO --region $REGION --query "repositories[0].repositoryUri" --output text)
+          docker build -t $ECR_REPO .
+          docker tag $ECR_REPO:latest $IMAGE_URI:latest
+          docker push $IMAGE_URI:latest
+          echo "ECR_IMAGE_URI=$IMAGE_URI:latest" >> $GITHUB_ENV
+
+      - name: Render task definition
+        run: |
+          jq --arg IMAGE_URI "${{ env.ECR_IMAGE_URI }}" \
+            '.containerDefinitions[0].image = $IMAGE_URI' \
+            task-definition-template.json > task-definition.json
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
