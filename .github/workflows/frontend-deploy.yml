@@ -47,7 +47,7 @@ jobs:
             task-definition-template.json > task-definition.json
 
       - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v3
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: task-definition.json
           service: ${{ env.ECS_SERVICE }}
