@@ -1,5 +1,16 @@
-FROM nginx:latest
+# Etapa de build
+FROM node:18-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+# Etapa de producción con NGINX
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 80
-
-COPY build /usr/share/nginx/html
+CMD ["nginx", "-g", "daemon off;"]
