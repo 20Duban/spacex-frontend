@@ -1,46 +1,86 @@
-# Getting Started with Create React App
+SpaceX Frontend
+🚀 Descripción
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Este proyecto es una interfaz web desarrollada con React + TypeScript + Bootstrap para visualizar lanzamientos espaciales utilizando datos de la API de SpaceX. La aplicación se despliega automáticamente en AWS ECS Fargate utilizando un pipeline CI/CD con GitHub Actions.
 
-## Available Scripts
+1. Clonar el repositorio
 
-In the project directory, you can run:
+git clone https://github.com/20Duban/spacex-frontend.git
+cd spacex-frontend
 
-### `npm start`
+2. Instalar dependencias
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+npm install
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+3. Ejecutar la app
 
-### `npm test`
+npm run start
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+☁️ Despliegue en AWS (producción)
+✅ Arquitectura
 
-### `npm run build`
+    AWS ECS (Fargate) para desplegar el frontend.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+    AWS ECR para almacenar las imágenes Docker.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    GitHub Actions para CI/CD automatizado.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+    Nginx sirve los archivos estáticos construidos de React.
 
-### `npm run eject`
+⚙️ Requisitos en AWS
+🔹 1. Crear un cluster ECS (una sola vez)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+aws ecs create-cluster --cluster-name spacex-cluster --region us-east-1
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+🔹 2. Crear el rol de ejecución
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Nombre del rol: ecsTaskExecutionRole
 
-## Learn More
+{
+  "Version": "2008-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+✅ Permisos adjuntos al rol:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    AmazonECSTaskExecutionRolePolicy
+    AmazonEC2ContainerRegistryReadOnly
+
+🔹 3. Configurar el Security Group
+
+Permitir tráfico entrante en los puertos:
+Puerto	Protocolo	Origen	Descripción
+80	TCP	0.0.0.0/0	HTTP público
+80	TCP	::/0	IPv6 público
+
+
+🔄 CI/CD automático con GitHub Actions
+
+Cada vez que se haces un push a master, se dispara el flujo de CI/CD:
+
+    Instala dependencias.
+
+    Construye la imagen Docker.
+
+    Sube la imagen a ECR.
+
+    Actualiza la definición de tarea.
+
+    Despliega a ECS Fargate.
+
+
+Asegúrate de tener las siguientes secrets en GitHub:
+    Nombre	Valor
+    AWS_ACCESS_KEY_ID	Tu access key
+    AWS_SECRET_ACCESS_KEY	Tu secret key
+    AWS_REGION	us-east-1
+
