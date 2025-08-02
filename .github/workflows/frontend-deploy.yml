@@ -46,6 +46,20 @@ jobs:
             '.containerDefinitions[0].image = $IMAGE_URI' \
             task-definition-template.json > task-definition.json
 
+      - name: Ensure ECS Cluster exists
+        run: |
+          CLUSTER_EXISTS=$(aws ecs describe-clusters \
+            --clusters $ECS_CLUSTER \
+            --region $REGION \
+            --query "clusters[?status=='ACTIVE'].clusterName" --output text)
+
+          if [ -z "$CLUSTER_EXISTS" ]; then
+            echo "Creating ECS cluster: $ECS_CLUSTER"
+            aws ecs create-cluster --cluster-name $ECS_CLUSTER --region $REGION
+          else
+            echo "ECS cluster $ECS_CLUSTER already exists"
+          fi
+
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
