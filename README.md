@@ -1,86 +1,163 @@
-SpaceX Frontend
-🚀 Descripción
+🚀 SpaceX Frontend (React + AWS Fargate + GitHub Actions)
 
-Este proyecto es una interfaz web desarrollada con React + TypeScript + Bootstrap para visualizar lanzamientos espaciales utilizando datos de la API de SpaceX. La aplicación se despliega automáticamente en AWS ECS Fargate utilizando un pipeline CI/CD con GitHub Actions.
+Este proyecto implementa una interfaz web desarrollada con React + TypeScript + Bootstrap para visualizar lanzamientos de SpaceX, consumiendo la API implementada en AWS Lambda. El despliegue en producción se realiza automáticamente mediante GitHub Actions sobre AWS ECS Fargate.
+🧰 Tecnologías utilizadas
 
+    React 18 + TypeScript
+    Bootstrap 5
+    Docker + Nginx
+    Amazon ECS (Fargate)
+    Amazon ECR
+    GitHub Actions
+
+📁 Estructura del proyecto
+
+├── public/
+├── src/
+├── Dockerfile
+├── task-definition-template.json  # Plantilla para ECS Fargate
+├── .github/workflows/deploy.yml  # CI/CD con GitHub Actions
+├── package.json
+└── README.md
+
+💻 Ejecución local
 1. Clonar el repositorio
 
+```bash
 git clone https://github.com/20Duban/spacex-frontend.git
 cd spacex-frontend
+```
 
 2. Instalar dependencias
-
+```bash
 npm install
+```
 
-3. Ejecutar la app
-
+3. Ejecutar localmente
+```bash
 npm run start
+```
 
-☁️ Despliegue en AWS (producción)
+🐳 Ejecutar localmente con Docker
+1. Construir la imagen
+
+```bash
+docker build -t spacex-frontend .
+```
+
+2. Ejecutar el contenedor
+```bash
+docker run -d -p 80:80 spacex-frontend
+```
+
+Abrir en el navegador:
+👉 http://localhost
+☁️ Despliegue en AWS (Producción)
 ✅ Arquitectura
 
-    AWS ECS (Fargate) para desplegar el frontend.
+    ECS Fargate: despliegue del contenedor sin gestionar servidores.
+    ECR: almacenamiento de imágenes Docker.
+    GitHub Actions: CI/CD automatizado.
+    Nginx: servidor web para los archivos estáticos de React.
 
-    AWS ECR para almacenar las imágenes Docker.
+🔹 1. Crear el Cluster ECS (manualmente)
 
-    GitHub Actions para CI/CD automatizado.
+Este es el primer paso para ejecutar tu frontend en AWS ECS Fargate.
+🧭 Pasos para crear el cluster spacex-cluster:
 
-    Nginx sirve los archivos estáticos construidos de React.
+    Inicia sesión en la consola de AWS y ve al servicio ECS:
+    👉 https://console.aws.amazon.com/ecs
 
-⚙️ Requisitos en AWS
-🔹 1. Crear un cluster ECS (una sola vez)
+    En el menú izquierdo, selecciona “Clusters”.
+    Haz clic en el botón “Create Cluster”.
+    Selecciona la opción “Networking only” (AWS Fargate) → Haz clic en Next.
+    Rellena el formulario:
 
-aws ecs create-cluster --cluster-name spacex-cluster --region us-east-1
+Campo	Valor
+Cluster name	spacex-cluster
+Default VPC/Subnets	(puedes usar las predeterminadas)
+Container Insights	(opcional)
 
+    Haz clic en Create.
 
-🔹 2. Crear el rol de ejecución
+✅ Ahora tendrás un cluster vacío llamado spacex-cluster, listo para recibir servicios y tareas Fargate.
+🔹 2. Crear el rol de ejecución ECS
 
-Nombre del rol: ecsTaskExecutionRole
+Nombre: ecsTaskExecutionRole
 
+Trust relationship:
+```json
 {
   "Version": "2008-10-17",
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": {
-        "Service": "ecs-tasks.amazonaws.com"
-      },
+      "Principal": { "Service": "ecs-tasks.amazonaws.com" },
       "Action": "sts:AssumeRole"
     }
   ]
 }
+```
 
-✅ Permisos adjuntos al rol:
+Permisos necesarios:
 
     AmazonECSTaskExecutionRolePolicy
     AmazonEC2ContainerRegistryReadOnly
 
-🔹 3. Configurar el Security Group
+🔹 3. Crear el servicio ECS
 
-Permitir tráfico entrante en los puertos:
+    Ir a ECS → Clusters → spacex-cluster
+    Click en “Create service”
+    Configura:
+
+        Launch type: FARGATE
+        Task Definition: spacex-frontend-task
+        Service name: spacex-frontend-service
+        Number of tasks: 1
+        Cluster: spacex-cluster
+
+
+
+🔹 4. Configurar el Security Group
+
+Permitir tráfico entrante:
 Puerto	Protocolo	Origen	Descripción
-80	TCP	0.0.0.0/0	HTTP público
-80	TCP	::/0	IPv6 público
+80	TCP	0.0.0.0/0	HTTP (IPv4 público)
+80	TCP	::/0	HTTP (IPv6 público)
+443	TCP	0.0.0.0/0	HTTPS (opcional)
+443	TCP	::/0	HTTPS (opcional)
 
+🔄 CI/CD con GitHub Actions
 
-🔄 CI/CD automático con GitHub Actions
+📦 Secrets necesarios en el repositorio
+Nombre	Descripción
+AWS_ACCESS_KEY_ID	Access Key IAM con permisos
+AWS_SECRET_ACCESS_KEY	Secret Key IAM
+AWS_REGION	us-east-1
 
-Cada vez que se haces un push a master, se dispara el flujo de CI/CD:
+🔁 ¿Qué hace el pipeline?
+
+Cada vez que haces push a master:
 
     Instala dependencias.
-
     Construye la imagen Docker.
+    Sube la imagen a Amazon ECR.
+    Actualiza la definición de tarea ECS.
+    Despliega la nueva versión en ECS Fargate.
 
-    Sube la imagen a ECR.
+🌍 Ver la aplicación en producción
 
-    Actualiza la definición de tarea.
+Una vez desplegado, puedes acceder desde la IP pública o Load Balancer DNS asignado al servicio ECS.
 
-    Despliega a ECS Fargate.
+Ejemplo:
+👉 http://xx.xxx.xxx.xx
+
+(Recuerda tener puertos abiertos en el Security Group).
 
 
-Asegúrate de tener las siguientes secrets en GitHub:
-    Nombre	Valor
-    AWS_ACCESS_KEY_ID	Tu access key
-    AWS_SECRET_ACCESS_KEY	Tu secret key
-    AWS_REGION	us-east-1
-
+✍️ Autor
+  Duban Velazco
+  Software Engineer
+  GitHub https://github.com/20Duban
+  LinkedIn https://www.linkedin.com/in/duban-velazco-30b18420a/
+  Correo: micuentaduban@gmail.com
